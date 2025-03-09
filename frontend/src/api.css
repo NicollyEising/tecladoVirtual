@@ -1,0 +1,147 @@
+/* src/App.css */
+
+:root {
+  --primary-color: #4CAF50; /* Verde principal */
+  --secondary-color: #6c757d; /* Cinza para botões secundários */
+  --background-color: #f8f9fa; /* Fundo claro */
+  --text-color: #333; /* Cor do texto principal */
+  --text-light: #666; /* Cor do texto secundário */
+  --border-radius: 8px; /* Bordas arredondadas */
+  --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Sombra suave */
+  --transition: all 0.3s ease; /* Transição suave */
+}
+
+.App {
+  text-align: center;
+  font-family: 'Arial', sans-serif;
+  background-color: var(--background-color);
+  min-height: 100vh;
+  padding: 20px;
+  color: var(--text-color);
+}
+
+h1 {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  color: var(--primary-color);
+}
+
+input[type="text"] {
+  padding: 12px;
+  margin: 10px;
+  font-size: 1rem;
+  border: 2px solid #ddd;
+  border-radius: var(--border-radius);
+  width: 300px;
+  transition: var(--transition);
+}
+
+input[type="text"]:focus {
+  border-color: var(--primary-color);
+  outline: none;
+  box-shadow: var(--box-shadow);
+}
+
+button {
+  padding: 12px 24px;
+  font-size: 1rem;
+  margin: 10px;
+  cursor: pointer;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  transition: var(--transition);
+  box-shadow: var(--box-shadow);
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+button:hover:not(:disabled) {
+  background-color: #45a049;
+  transform: translateY(-2px);
+}
+
+.buttons {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 15px;
+  margin-top: 20px;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.buttons button {
+  font-size: 1.5rem;
+  padding: 20px;
+  background-color: var(--secondary-color);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  transition: var(--transition);
+}
+
+.buttons button:hover:not(:disabled) {
+  background-color: #5a6268;
+  transform: translateY(-2px);
+}
+
+h2 {
+  font-size: 1.8rem;
+  margin-top: 30px;
+  color: var(--primary-color);
+}
+
+h3 {
+  font-size: 1.4rem;
+  color: var(--text-light);
+  margin-top: 20px;
+}
+
+p {
+  font-size: 1.2rem;
+  color: var(--text-light);
+  margin: 10px 0;
+}
+
+.ToastContainer {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .buttons {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  input[type="text"] {
+    width: 80%;
+  }
+}
+
+@media (max-width: 480px) {
+  .buttons {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  h3 {
+    font-size: 1.2rem;
+  }
+}
