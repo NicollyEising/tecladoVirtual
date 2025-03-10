@@ -10,17 +10,14 @@ import os
 from jose import JWTError, jwt
 from fastapi import FastAPI, HTTPException, Request, Header, BackgroundTasks
 from pydantic import BaseModel
-import uvicorn
 from bancoDeDados import *
-import ssl
-from fastapi.middleware.cors import CORSMiddleware
 
 MONGO_URI = "mongodb+srv://nicollymunhozeising85:RRSAkX1DsOd5MRVO@cluster0.9xwlq.mongodb.net/"
 client = MongoClient(MONGO_URI)
 db = client["teclado_virtual"]
 sessions_collection = db["sessions"]
 blocked_ips_collection = db["blocked_ips"]
-
+from fastapi.middleware.cors import CORSMiddleware
 
 
 FERNET_KEY = Fernet.generate_key()
@@ -33,17 +30,6 @@ MAX_SESSIONS_BEFORE_REUSE = 1000
 
 app = FastAPI()
 
-# Rota simples de exemplo
-@app.get("/")
-def read_root():
-    return {"message": "Olá, Mundo!"}
-
-# Configuração SSL para HTTPS
-ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-ssl_context.load_cert_chain(certfile="server.crt", keyfile="server.key")
-
-
-    
 SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey")
 BLOCK_DURATION_SECONDS = 10 
 JWT_EXPIRATION_MINUTES = 15  
@@ -125,14 +111,3 @@ def invalidate_session(data: InvalidateSessionRequest):
     if delete_session(hashed_id):
         return {"message": "Sessão invalidada."}
     return {"message": "Sessão não encontrada ou já expirada."}
-
-## pem phrase = nao sei
-
-if __name__ == "__main__":
-    uvicorn.run(
-        "main:app",  # Se sua aplicação se chama 'main.py' e a instância FastAPI é 'app'
-        host="0.0.0.0",
-        port=443,
-        ssl_keyfile="server.key",  # Caminho para a chave privada
-        ssl_certfile="server.crt",  # Caminho para o certificado
-    )

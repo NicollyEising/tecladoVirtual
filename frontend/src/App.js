@@ -5,17 +5,6 @@ import 'react-toastify/dist/ReactToastify.css';
 import './api.css';
 import CryptoJS from 'crypto-js';  // Importe a biblioteca CryptoJS
 
-import https from 'https';
-
-const agent = new https.Agent({  
-  rejectUnauthorized: false  // Ignora erros de certificado
-});
-
-const response = await axios.post(`${apiUrl}/generate_session`, { username }, {
-  httpsAgent: agent
-});
-
-
 function App() {
   const [username, setUsername] = useState('');
   const [sessionId, setSessionId] = useState('');
@@ -106,11 +95,7 @@ function App() {
     );
   };
 
-  const apiUrl = "https://127.0.0.1:443";  // Use 127.0.0.1 para localhost
-  // Certifique-se de usar o endereço correto
-
-
-  // URL com HTTPS
+  const apiUrl = "https://seuservidor.com"; // URL com HTTPS
 
   const handleValidatePassword = async () => {
     try {
@@ -128,8 +113,7 @@ function App() {
         return;
       }
 
-      const response = await axios.post(`https://0.0.0.1:443/validate_sequence`, {
-        httpsAgent: new https.Agent({ rejectUnauthorized: false }), // vírgula aqui
+      const response = await axios.post(`http://127.0.0.1:8000/validate_sequence`, {
         session_id: sessionId,
         sequence: formattedSequence,
       }, {
@@ -166,9 +150,7 @@ function App() {
   };
 
   const generateSession = async (username) => {
-    const response = await axios.post(`${apiUrl}/generate_session`, { username });
-
-
+    const response = await axios.post('http://127.0.0.1:8000/generate_session', { username });
     
     // Criptografando o ID de Sessão antes de usá-lo
     const encryptedSessionId = encryptSessionId(response.data.session_id);
