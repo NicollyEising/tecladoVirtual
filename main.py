@@ -37,8 +37,7 @@ JWT_EXPIRATION_MINUTES = 15
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://192.168.0.49:3000"],  
-    allow_credentials=True,
+    allow_origins=["*"]=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
