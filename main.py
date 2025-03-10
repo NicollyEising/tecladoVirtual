@@ -3,20 +3,24 @@ import base64
 import random
 import secrets
 from datetime import datetime, timedelta
+import uuid
 from pymongo import MongoClient
 from cryptography.fernet import Fernet
 import os
 from jose import JWTError, jwt
-from fastapi import FastAPI, HTTPException, Request, Header
+from fastapi import FastAPI, HTTPException, Request, Header, BackgroundTasks
 from pydantic import BaseModel
+import uvicorn
 from bancoDeDados import *
+import ssl
+from fastapi.middleware.cors import CORSMiddleware
 
 MONGO_URI = "mongodb+srv://nicollymunhozeising85:RRSAkX1DsOd5MRVO@cluster0.9xwlq.mongodb.net/"
 client = MongoClient(MONGO_URI)
 db = client["teclado_virtual"]
 sessions_collection = db["sessions"]
 blocked_ips_collection = db["blocked_ips"]
-from fastapi.middleware.cors import CORSMiddleware
+
 
 
 FERNET_KEY = Fernet.generate_key()
@@ -27,17 +31,26 @@ MAX_FAILED_ATTEMPTS = 3
 IP_BLOCK_DURATION_SECONDS = 10  
 MAX_SESSIONS_BEFORE_REUSE = 1000  
 
-
 app = FastAPI()
 
+# Rota simples de exemplo
+@app.get("/")
+def read_root():
+    return {"message": "Olá, Mundo!"}
+
+# Configuração SSL para HTTPS
+ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+ssl_context.load_cert_chain(certfile="server.crt", keyfile="server.key")
+
+
+    
 SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey")
 BLOCK_DURATION_SECONDS = 10 
 JWT_EXPIRATION_MINUTES = 15  
 
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://192.168.0.49:3000"],  
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -45,18 +58,17 @@ app.add_middleware(
 
 @app.post("/generate_session")
 def generate_session():
-    session_id = secrets.token_hex(16)
+    session_id = str(uuid.uuid4())  # Exemplo de geração do ID de sessão
+    encrypted_session_id = encrypt_session_id(session_id)
     hashed_id = hash_session_id(session_id)
 
-    # Geração de números aleatórios (assumindo que você quer números individuais)
-    numbers = generate_random_numbers()  # Pode ser uma lista de números em vez de pares
+    numbers = generate_random_numbers() 
     expiration_time = datetime.utcnow() + timedelta(minutes=SESSION_EXPIRATION_MINUTES)
 
     save_session(hashed_id, numbers, expiration_time)
     encrypted_session_id = cipher.encrypt(session_id.encode()).decode()
 
     return {"session_id": encrypted_session_id, "sequence": numbers, "token": generate_jwt(session_id)}
-
 
 @app.post("/validate_sequence")
 def validate_sequence(data: ValidationRequest, request: Request, authorization: str = Header(None)):
@@ -97,6 +109,11 @@ def validate_sequence(data: ValidationRequest, request: Request, authorization: 
     return {"message": "Sequência validada com sucesso."}
 
 
+@app.post("/clean_sessions")
+def clean_sessions(background_tasks: BackgroundTasks):
+    background_tasks.add_task(clean_expired_sessions)
+    return {"message": "Limpeza das sessões foi agendada."}
+
 @app.post("/invalidate_session")
 def invalidate_session(data: InvalidateSessionRequest):
     try:
@@ -108,3 +125,14 @@ def invalidate_session(data: InvalidateSessionRequest):
     if delete_session(hashed_id):
         return {"message": "Sessão invalidada."}
     return {"message": "Sessão não encontrada ou já expirada."}
+
+## pem phrase = nao sei
+
+if __name__ == "__main__":
+    uvicorn.run(
+        "main:app",  # Se sua aplicação se chama 'main.py' e a instância FastAPI é 'app'
+        host="0.0.0.0",
+        port=443,
+        ssl_keyfile="server.key",  # Caminho para a chave privada
+        ssl_certfile="server.crt",  # Caminho para o certificado
+    )

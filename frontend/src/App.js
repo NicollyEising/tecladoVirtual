@@ -1,8 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import axios from 'axios';
 import 'react-toastify/dist/ReactToastify.css';
 import './api.css';
+import CryptoJS from 'crypto-js';  // Importe a biblioteca CryptoJS
+
+import https from 'https';
+
+const agent = new https.Agent({  
+  rejectUnauthorized: false  // Ignora erros de certificado
+});
+
+const response = await axios.post(`${apiUrl}/generate_session`, { username }, {
+  httpsAgent: agent
+});
+
 
 function App() {
   const [username, setUsername] = useState('');
@@ -14,7 +26,6 @@ function App() {
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   const [buttons, setButtons] = useState([]);
 
-  // Função para gerar nova sessão
   const handleGenerateSession = async () => {
     if (!username) {
       toast.error('Por favor, insira um nome de usuário.');
@@ -27,10 +38,10 @@ function App() {
 
       if (data && data.sequence && Array.isArray(data.sequence)) {
         setSessionId(data.session_id);
-        setPassword(formatSequence(data.sequence)); // Guardando a senha formatada
+        setPassword(formatSequence(data.sequence)); 
         setToken(data.token);
         setIsSessionValid(true);
-        generateButtons(data.sequence); // Gera botões com misturados
+        generateButtons(data.sequence); 
 
         console.log("Token de Verificação:", data.token);
         toast.success('Sessão gerada com sucesso!');
@@ -43,7 +54,6 @@ function App() {
     }
   };
 
-  // Formata a sequência correta em pares
   const formatSequence = (sequence) => {
     let formatted = [];
     for (let i = 0; i < sequence.length; i += 2) {
@@ -52,69 +62,32 @@ function App() {
     return formatted;
   };
 
-  // Função para validar a seleção
-  const isValidSelection = (selectedNumber) => {
-    const flatPassword = password.flat();  // Aqui "achata" a sequência correta da senha
-    const nextExpectedNumber = flatPassword[inputSequence.length];  // Verifica o próximo número esperado
-    return selectedNumber === nextExpectedNumber;
-  };
-
-  // Função para lidar com o clique nos botões
-  const handleButtonClick = (pair) => {
-    const flatPassword = password.flat(); // "Achata" a senha para facilitar a comparação
-    const nextExpectedNumber = flatPassword[inputSequence.length]; // Obtém o próximo número esperado da senha
-    
-    // Verifica se o número do par é válido (igual ao próximo número esperado)
-    const isValid = pair.includes(nextExpectedNumber); // Verifica se o próximo número esperado está no par
-
-    if (isValid) {
-      // Se for válido, adiciona o número à sequência
-      setInputSequence((prevSequence) => {
-        const newSequence = [...prevSequence, nextExpectedNumber];
-        console.log("Sequência do usuário após clique:", newSequence);
-        return newSequence;
-      });
-    } else {
-      // Se for inválido, exibe uma mensagem de erro e não faz nada
-      toast.error(`Número ${nextExpectedNumber} não está no par. Tente novamente.`);
-    }
-  };
-
-  // Gera botões misturados, incluindo as alternativas corretas
   const generateButtons = (sequence) => {
     let correctPairs = [];
     
-    // Criar pares corretos com opções alternativas
     for (let i = 0; i < sequence.length; i += 2) {
       let num1 = sequence[i];
       let num2 = sequence[i + 1];
       
-      // Adiciona cada par como uma opção alternada
       correctPairs.push([num1, num2]);
     }
 
     let allButtons = [];
-
-    // Adiciona os pares corretos
     correctPairs.forEach(pair => {
       allButtons.push(pair);
     });
 
-    // Adiciona pares falsos aleatórios
     for (let i = 0; i < correctPairs.length; i++) {
-      let num1 = Math.floor(Math.random() * 10);  // Número aleatório entre 0-9
+      let num1 = Math.floor(Math.random() * 10);  
       let num2 = Math.floor(Math.random() * 10);
       allButtons.push([num1, num2]);
     }
 
-    // Embaralha os pares de botões
     allButtons = allButtons.sort(() => Math.random() - 0.5);
 
-    // Define os botões embaralhados no estado
     setButtons(allButtons);
   };
 
-  // Exibe os botões misturados
   const displayButtons = () => {
     if (buttons.length === 0) return <p>Esperando sequência...</p>;
 
@@ -123,7 +96,7 @@ function App() {
         {buttons.map((pair, index) => (
           <button
             key={index}
-            onClick={() => handleButtonClick(pair)}  // Passa o par inteiro para a função de clique
+            onClick={() => handleButtonClick(pair)} 
             disabled={isButtonDisabled}
           >
             [{pair[0]} ou {pair[1]}]
@@ -133,30 +106,30 @@ function App() {
     );
   };
 
-  // Função para validar a sequência ao final
+  const apiUrl = "https://127.0.0.1:443";  // Use 127.0.0.1 para localhost
+  // Certifique-se de usar o endereço correto
+
+
+  // URL com HTTPS
+
   const handleValidatePassword = async () => {
     try {
-      // Ensure the sequence is in pairs
       const formattedSequence = [];
       for (let i = 0; i < inputSequence.length; i += 2) {
         formattedSequence.push([inputSequence[i], inputSequence[i + 1]]);
       }
-  
-      console.log("Senha do usuário antes do envio:", formattedSequence);
-  
-      // Check if the formatted sequence matches the password
+
       const isSequenceCorrect = formattedSequence.every((pair, index) => {
-        return (
-          pair[0] === password[index][0] && pair[1] === password[index][1]
-        );
+        return pair[0] === password[index][0] && pair[1] === password[index][1];
       });
-  
+
       if (!isSequenceCorrect) {
         toast.error('Sequência incorreta');
         return;
       }
-  
-      const response = await axios.post('http://127.0.0.1:8000/validate_sequence', {
+
+      const response = await axios.post(`https://0.0.0.1:443/validate_sequence`, {
+        httpsAgent: new https.Agent({ rejectUnauthorized: false }), // vírgula aqui
         session_id: sessionId,
         sequence: formattedSequence,
       }, {
@@ -164,7 +137,7 @@ function App() {
           Authorization: `Bearer ${token}`,
         },
       });
-  
+
       console.log("✅ Sequência validada com sucesso:", response.data);
       toast.success('Sequência validada com sucesso!');
       setIsSessionValid(false);
@@ -174,15 +147,47 @@ function App() {
       toast.error('Erro ao validar a sequência');
     }
   };
+
+  const handleButtonClick = (pair) => {
+    const flatPassword = password.flat();  // Cria uma lista plana da senha
+    const nextExpectedNumber = flatPassword[inputSequence.length];  // Obtém o próximo número esperado
+    
+    const isValid = pair.includes(nextExpectedNumber);  // Verifica se o número selecionado está no par
   
-  // Função para gerar sessão no backend
+    if (isValid) {
+      setInputSequence((prevSequence) => {
+        const newSequence = [...prevSequence, nextExpectedNumber];
+        console.log("Sequência do usuário após clique:", newSequence);
+        return newSequence;
+      });
+    } else {
+      toast.error(`Número ${nextExpectedNumber} não está no par. Tente novamente.`);
+    }
+  };
+
   const generateSession = async (username) => {
-    const response = await axios.post('http://127.0.0.1:8000/generate_session', { username });
-    console.log('Resposta da API de geração de sessão:', response.data);
+    const response = await axios.post(`${apiUrl}/generate_session`, { username });
+
+
+    
+    // Criptografando o ID de Sessão antes de usá-lo
+    const encryptedSessionId = encryptSessionId(response.data.session_id);
+    
+    setSessionId(encryptedSessionId);
+    setPassword(formatSequence(response.data.sequence));
+    setToken(response.data.token);
+    
+    console.log('ID da sessão criptografado:', encryptedSessionId);
+    
     return response.data;
   };
 
-  // Exibe a senha gerada de forma formatada
+  const encryptSessionId = (sessionId) => {
+    // Use CryptoJS para criptografar o ID de Sessão
+    const encrypted = CryptoJS.AES.encrypt(sessionId, 'sua_chave_secreta').toString();
+    return encrypted;
+  };
+
   const displayPassword = () => {
     if (password.length === 0) return <p>Carregando senha...</p>;
 

@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://192.168.1.6:3000/";
+const API_URL = "https://0.0.0.0:443/";
 
 // Função para validar a sequência
 export async function validateSequence(sessionId, sequence) {
@@ -13,7 +13,7 @@ export async function validateSequence(sessionId, sequence) {
   });
 
   try {
-      const response = await axios.post("http://127.0.0.1:8000/validate_sequence", {
+      const response = await axios.post("https://0.0.0.0:443/validate_sequence", {
           session_id: sessionId,
           sequence: formattedSequence
       }, {
