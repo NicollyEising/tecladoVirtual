@@ -40,9 +40,12 @@ JWT_EXPIRATION_MINUTES = 15  # Tempo de expiração do JWT
 # 🔹 Função para gerar pares de números aleatórios
 def generate_random_pairs():
     numbers = list(range(1, 10))  # Números de 1 a 9
-    random.shuffle(numbers)  # Embaralha os números
-    pairs = [(numbers[i], numbers[i + 1]) for i in range(0, len(numbers) - 1, 2)]  # Cria pares consecutivos
-    return pairs
+    random.shuffle(numbers)
+    return [[numbers[i], numbers[i + 1]] for i in range(0, len(numbers) - 1, 2)]
+
+def generate_random_numbers():
+    return [random.randint(0, 9) for _ in range(10)]  # Exemplo, você pode ajustar conforme necessário
+
 
 # 🔹 Função para mapear um dígito para o botão correspondente
 def map_digit_to_button(digit, pairs):
@@ -72,24 +75,16 @@ def hash_session_id(session_id):
     return base64.urlsafe_b64encode(hashlib.sha256(session_id.encode()).digest()).decode()
 
 # 🔹 Função para salvar a sessão no banco de dados
-def save_session(hashed_id, pairs, expiration_time, attempts=0, ip_address=None, original_password=None):
-    """
-    Salva a sessão no banco de dados, incluindo os pares de botões e, opcionalmente, a senha original.
-    """
+def save_session(hashed_id, sequence, expiration_time, attempts=0, ip_address=None):
     session_data = {
         "session_id": hashed_id,
-        "pairs": pairs,  # Armazena os pares de botões
+        "sequence": sequence,
         "expires_at": expiration_time,
         "attempts": attempts,
-        "ip_address": ip_address,
-        "original_password": original_password  # Armazena a senha original (opcional, para validação)
+        "ip_address": ip_address
     }
+    sessions_collection.update_one({"session_id": hashed_id}, {"$set": session_data}, upsert=True)
 
-    sessions_collection.update_one(
-        {"session_id": hashed_id},
-        {"$set": session_data},
-        upsert=True
-    )
 
 class User(BaseModel):
     username: str
@@ -102,7 +97,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 def hash_password(password: str):
     return pwd_context.hash(password)
 
-# 🔹 Função para verificar a senha
+# Função para verificar a senha
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
@@ -122,22 +117,17 @@ def get_session_count():
 # 🔹 Função para verificar se um IP está bloqueado
 def is_ip_blocked(ip_address):
     blocked_ip = blocked_ips_collection.find_one({"ip": ip_address})
-    if blocked_ip:
-        # Verifica se o bloqueio já expirou
-        if blocked_ip["expires_at"] < datetime.utcnow():
-            blocked_ips_collection.delete_one({"ip": ip_address})
-            return False
+    if blocked_ip and blocked_ip["expires_at"] > datetime.utcnow():
         return True
     return False
 
+
 # 🔹 Função para bloquear um IP após tentativas falhas
+# Função para bloquear um IP após tentativas falhas
 def block_ip(ip_address):
     expires_at = datetime.utcnow() + timedelta(seconds=IP_BLOCK_DURATION_SECONDS)
-    blocked_ips_collection.update_one(
-        {"ip": ip_address},
-        {"$set": {"ip": ip_address, "expires_at": expires_at}},
-        upsert=True
-    )
+    blocked_ips_collection.update_one({"ip": ip_address}, {"$set": {"expires_at": expires_at}}, upsert=True)
+
 
 # 🔹 Função para incrementar tentativas de falha e bloquear IP se necessário
 def increment_failed_attempts(hashed_id, ip_address):
@@ -146,7 +136,7 @@ def increment_failed_attempts(hashed_id, ip_address):
         return
     
     attempts = session.get("attempts", 0) + 1
-    save_session(hashed_id, session["pairs"], session["expires_at"], attempts, ip_address, session.get("original_password"))
+    save_session(hashed_id, session["sequence"], session["expires_at"], attempts, ip_address)
 
     if attempts >= MAX_FAILED_ATTEMPTS:
         block_ip(ip_address)
@@ -172,9 +162,7 @@ def validate_jwt(token: str, expected_session_id: str):
             raise HTTPException(status_code=401, detail="Token não corresponde à sessão.")
         return True
     except JWTError as e:
-        raise HTTPException(StatusCode)
-    
-
+        raise HTTPException(status_code=401, detail=f"Token inválido ou expirado: {str(e)}")
 
 def encrypt_pin(pin: str) -> str:
     encrypted_pin = cipher.encrypt(pin.encode()).decode()
@@ -196,6 +184,16 @@ def create_user(user_id: str, pin: str):
         "encrypted_pin": encrypted_pin
     }
     users_collection.insert_one(user_data)
+
+
+# 🔹 Modelo para requisições de validação
+class ValidationRequest(BaseModel):
+    session_id: str
+    sequence: list[list[int]]
+
+
+class InvalidateSessionRequest(BaseModel):
+    session_id: str
 
 
 def decrypt_pin(encrypted_pin: str):
