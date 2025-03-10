@@ -35,12 +35,16 @@ BLOCK_DURATION_SECONDS = 10
 JWT_EXPIRATION_MINUTES = 15  
 
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"]=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["*"],  # Permite requisições de qualquer origem
+    allow_credentials=True,
+    allow_methods=["*"],  # Permite todos os métodos HTTP
+    allow_headers=["*"],  # Permite todos os headers
 )
+
 
 @app.post("/generate_session")
 def generate_session():
