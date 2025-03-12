@@ -1,44 +1,93 @@
-/* src/App.css */
-
+/*-----------------------------------------------------------
+  1. Variáveis e Reset Global
+-----------------------------------------------------------*/
 :root {
-  --primary-color: #4CAF50; /* Verde principal */
-  --secondary-color: #6c757d; /* Cinza para botões secundários */
-  --background-color: #f8f9fa; /* Fundo claro */
-  --text-color: #333; /* Cor do texto principal */
-  --text-light: #666; /* Cor do texto secundário */
-  --border-radius: 8px; /* Bordas arredondadas */
-  --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Sombra suave */
-  --transition: all 0.3s ease; /* Transição suave */
+  --primary-color: #4CAF50;
+  --primary-color-hover: #45a049;
+  --secondary-color: #6c757d;
+  --secondary-color-hover: #5a6268;
+  --background-color: #f8f9fa;
+  --text-color: #333;
+  --text-light: #666;
+  --border-radius: 8px;
+  --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --transition: all 0.3s ease;
+}
+
+/* Reset para garantir consistência entre navegadores */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/*-----------------------------------------------------------
+  2. Estrutura Base
+-----------------------------------------------------------*/
+body {
+  font-family: 'Arial', sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
 }
 
 .App {
-  text-align: center;
-  font-family: 'Arial', sans-serif;
-  background-color: var(--background-color);
-  min-height: 100vh;
-  padding: 20px;
-  color: var(--text-color);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  text-align: center;
 }
 
+/*-----------------------------------------------------------
+  3. Tipografia
+-----------------------------------------------------------*/
 h1 {
   font-size: 2.5rem;
   margin-bottom: 20px;
   color: var(--primary-color);
 }
 
+h2 {
+  font-size: 1.8rem;
+  margin-top: 30px;
+  color: var(--primary-color);
+}
+
+h3 {
+  font-size: 1.4rem;
+  margin-top: 20px;
+  color: var(--text-light);
+}
+
+p {
+  font-size: 1.2rem;
+  margin: 10px 0;
+  color: var(--text-light);
+}
+
+/*-----------------------------------------------------------
+  4. Formulários e Inputs
+-----------------------------------------------------------*/
+.form-container {
+  margin-bottom: 20px;
+}
+
+.form-container label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
 input[type="text"] {
+  width: 300px;
   padding: 12px;
-  margin: 10px;
   font-size: 1rem;
   border: 2px solid #ddd;
   border-radius: var(--border-radius);
-  width: 300px;
+  background-color: #fff;
   transition: var(--transition);
-  background-color: white;
 }
 
 input[type="text"]:focus {
@@ -47,33 +96,42 @@ input[type="text"]:focus {
   box-shadow: var(--box-shadow);
 }
 
-button {
+/*-----------------------------------------------------------
+  5. Botões
+-----------------------------------------------------------*/
+/* Botão primário */
+.primary-button {
   padding: 12px 24px;
   font-size: 1rem;
   margin: 10px;
   cursor: pointer;
   background-color: var(--primary-color);
-  color: white;
+  color: #fff;
   border: none;
   border-radius: var(--border-radius);
   transition: var(--transition);
   box-shadow: var(--box-shadow);
 }
 
-button:disabled {
+.primary-button:disabled {
   background-color: #ccc;
   cursor: not-allowed;
   box-shadow: none;
 }
 
-button:hover:not(:disabled) {
-  background-color: #45a049;
+.primary-button:hover:not(:disabled) {
+  background-color: var(--primary-color-hover);
   transform: translateY(-2px);
 }
 
-button:active:not(:disabled) {
-  transform: translateY(0px);
+.primary-button:active:not(:disabled) {
+  transform: translateY(0);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Botões da sequência */
+.buttons-container {
+  margin-top: 20px;
 }
 
 .buttons {
@@ -90,36 +148,21 @@ button:active:not(:disabled) {
   font-size: 1.5rem;
   padding: 20px;
   background-color: var(--secondary-color);
-  color: white;
+  color: #fff;
   border: none;
   border-radius: var(--border-radius);
-  box-shadow: var(--box-shadow);
   transition: var(--transition);
+  box-shadow: var(--box-shadow);
 }
 
 .buttons button:hover:not(:disabled) {
-  background-color: #5a6268;
+  background-color: var(--secondary-color-hover);
   transform: translateY(-2px);
 }
 
-h2 {
-  font-size: 1.8rem;
-  margin-top: 30px;
-  color: var(--primary-color);
-}
-
-h3 {
-  font-size: 1.4rem;
-  color: var(--text-light);
-  margin-top: 20px;
-}
-
-p {
-  font-size: 1.2rem;
-  color: var(--text-light);
-  margin: 10px 0;
-}
-
+/*-----------------------------------------------------------
+  6. Toasts e Feedback Visual
+-----------------------------------------------------------*/
 .ToastContainer {
   position: fixed;
   top: 20px;
@@ -127,12 +170,13 @@ p {
   z-index: 1000;
 }
 
-/* Responsividade */
+/*-----------------------------------------------------------
+  7. Responsividade
+-----------------------------------------------------------*/
 @media (max-width: 768px) {
   .buttons {
     grid-template-columns: repeat(3, 1fr);
   }
-
   input[type="text"] {
     width: 80%;
   }
@@ -142,17 +186,13 @@ p {
   .buttons {
     grid-template-columns: repeat(2, 1fr);
   }
-
   h1 {
     font-size: 2rem;
   }
-
   h2 {
     font-size: 1.5rem;
   }
-
   h3 {
     font-size: 1.2rem;
   }
 }
-  

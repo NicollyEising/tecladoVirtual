@@ -46,12 +46,11 @@ JWT_EXPIRATION_MINUTES = 3
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permite todos os domínios
+    allow_origins=["*", "http://10.197.75.79:3000", "http://127.0.0.1:8000"],  
     allow_credentials=True,
-    allow_methods=["*"],  # Permite todos os métodos HTTP (GET, POST, etc.)
-    allow_headers=["*"],  # Permite todos os cabeçalhos
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-
 def encrypt_numbers(numbers: list) -> list:
     hashed_numbers = [hashlib.sha256(str(num).encode('utf-8')).hexdigest() for num in numbers]
     return hashed_numbers
