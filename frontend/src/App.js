@@ -90,13 +90,13 @@ const generateButtons = (sequence) => {
 };
 
 
-
-
+const handleClearInput = () => {
+  setInputSequence([]);
+};
 
   // Função para gerar nova sessão
   const handleGenerateSession = async () => {
     if (!username) {
-      toast.error('Por favor, insira um nome de usuário.');
       return;
     }
     setIsLoading(true);
@@ -109,12 +109,9 @@ const generateButtons = (sequence) => {
         setIsSessionValid(true);
         generateButtons(data.sequence);
         console.log('Token de Verificação:', data.token);
-        toast.success('Sessão gerada com sucesso!');
       } else {
-        toast.error('Erro: a sequência não foi retornada corretamente.');
       }
     } catch (error) {
-      toast.error('Erro ao gerar sessão');
       console.error('Erro ao gerar sessão:', error);
     } finally {
       setIsLoading(false);
@@ -151,7 +148,6 @@ const generateButtons = (sequence) => {
     const nextExpectedNumber = flatPassword[inputSequence.length];
   
     if (nextExpectedNumber === undefined) {
-      toast.error('A senha já foi completamente inserida!');
       return;
     }
   
@@ -169,9 +165,7 @@ const generateButtons = (sequence) => {
         if (newSequence.length === flatPassword.length) {
           const isCorrect = newSequence.every((num, index) => num === flatPassword[index]);
           if (isCorrect) {
-            toast.success('Senha correta! Acesso liberado.');
           } else {
-            toast.error('Sequência incorreta. Tente novamente.');
             setIsButtonDisabled(true);
             setTimeout(() => setIsButtonDisabled(false), 2000);
           }
@@ -181,7 +175,6 @@ const generateButtons = (sequence) => {
         return newSequence;
       });
     } else {
-      toast.error(`Par incorreto. O próximo número esperado é ${nextExpectedNumber}. Tente novamente.`);
       setIsButtonDisabled(true);
       setTimeout(() => setIsButtonDisabled(false), 2000);
     }
@@ -190,15 +183,16 @@ const generateButtons = (sequence) => {
   // Exibe a senha gerada (versão hasheada)
   const displayGeneratedPassword = () => {
     if (!password.original || password.original.length === 0) return <p>Esperando sequência...</p>;
-    const generatedPassword = password.hashed.flat();
+  
+    // Flattening the password array and joining the elements into a string
+    const generatedPassword = password.hashed.flat();  // Flatten the hashed array
     return (
       <div>
-        <h2>Senha Gerada:</h2>
-        <p>{`[${generatedPassword.join(', ')}]`}</p>
+        <h2 className="senha-gerada">Senha Gerada:</h2>
+        <p className='senha'>{generatedPassword.join('')}</p> {/* Agora como string contínua */}
       </div>
     );
   };
-
   // Função para validar a sequência digitada pelo usuário
   const handleValidatePassword = async () => {
     try {
@@ -206,7 +200,6 @@ const generateButtons = (sequence) => {
       const flatPassword = password.hashed.flat();
       // Compara diretamente a sequência inserida com a versão hasheada correta
       if (inputSequence.join(' ') !== flatPassword.join(' ')) {
-        toast.error('A sequência digitada está incorreta. Tente novamente.');
         return;
       }
       const data = {
@@ -223,11 +216,9 @@ const generateButtons = (sequence) => {
         },
       });
       console.log('✅ Sequência validada com sucesso:', response.data);
-      toast.success('Sequência validada com sucesso!');
       setIsSessionValid(false);
     } catch (error) {
       console.log('Error response:', error.response ? error.response.data : error.message);
-      toast.error('Erro ao validar a sequência');
     }
   };
 
@@ -239,36 +230,39 @@ const generateButtons = (sequence) => {
   };
 
   return (
-    <div className="App">
+    <div className="App wrapper">
       <h1>Teclado Virtual</h1>
 
-      <div className="form-container">
-        <label htmlFor="username">Nome de Usuário:</label>
-        <input
-          id="username"
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Digite seu nome de usuário"
-        />
-      </div>
+      {!isSessionValid ? (
+  <>
+    <div className="form-container">
+      <input
+        id="username"
+        type="text"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        placeholder="Nome de usuário"
+      />
+      <i className="bx bxs-user"></i>
+    </div>
 
-      <button onClick={handleGenerateSession} className="primary-button" disabled={isLoading}>
-        {isLoading ? 'Gerando Sessão...' : 'Gerar Nova Sessão'}
-      </button>
+    <button onClick={handleGenerateSession} className="primary-button" disabled={isLoading}>
+      {isLoading ? 'Gerando Sessão...' : 'Gerar Nova Sessão'}
+    </button>
+  </>
+) : (
+  <>
+    {displayGeneratedPassword()}
+    <h2 className='clique'>Clique nos botões abaixo para digitar a senha:</h2>
+    <div className="buttons-container">{displayButtons()}</div>
+    <h3>Senha Selecionada:</h3>
+    <p className='senha-digitada'>{inputSequence.join(' ')}</p><div className="clear-button"><button onClick={handleClearInput} className="secondary-button"><i class='bx bxs-eraser apagar'></i></button></div>
+    <button onClick={handleValidatePassword} className="primary-button .validar-senha">
+      Validar Senha
+    </button>
+  </>
+)}
 
-      {isSessionValid && (
-        <>
-          {displayGeneratedPassword()}
-          <h2>Clique nos botões abaixo para digitar a senha:</h2>
-          <div className="buttons-container">{displayButtons()}</div>
-          <h3>Senha Selecionada:</h3>
-          <p>{inputSequence.join(' ')}</p>
-          <button onClick={handleValidatePassword} className="primary-button">
-            Validar Senha
-          </button>
-        </>
-      )}
 
       <ToastContainer />
     </div>
