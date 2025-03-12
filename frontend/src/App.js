@@ -3,220 +3,238 @@ import { ToastContainer, toast } from 'react-toastify';
 import axios from 'axios';
 import 'react-toastify/dist/ReactToastify.css';
 import './api.css';
-import CryptoJS from 'crypto-js';  // Importe a biblioteca CryptoJS
+import CryptoJS from 'crypto-js';
 
 function App() {
   const [username, setUsername] = useState('');
   const [sessionId, setSessionId] = useState('');
-  const [password, setPassword] = useState([]);
+  // Inicializa password como objeto com chaves "original" e "hashed"
+  const [password, setPassword] = useState({ original: [], hashed: [] });
   const [inputSequence, setInputSequence] = useState([]);
   const [token, setToken] = useState('');
   const [isSessionValid, setIsSessionValid] = useState(false);
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   const [buttons, setButtons] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleGenerateSession = async () => {
-    if (!username) {
-      toast.error('Por favor, insira um nome de usuário.');
-      return;
+  // Função para gerar hash para cada número individualmente
+  const hashToNumber = (input) => {
+    if (input === undefined || input === null) {
+      console.error("Valor inválido para hash:", input);
+      return 0;
     }
 
-    try {
-      const data = await generateSession(username);
-      console.log('Dados recebidos da API:', data);
-
-      if (data && data.sequence && Array.isArray(data.sequence)) {
-        setSessionId(data.session_id);
-        setPassword(formatSequence(data.sequence)); 
-        setToken(data.token);
-        setIsSessionValid(true);
-        generateButtons(data.sequence); 
-
-        console.log("Token de Verificação:", data.token);
-        toast.success('Sessão gerada com sucesso!');
-      } else {
-        toast.error('Erro: a sequência não foi retornada corretamente.');
-      }
-    } catch (error) {
-      toast.error('Erro ao gerar sessão');
-      console.error('Erro ao gerar sessão:', error);
+    const hash = CryptoJS.SHA256(input.toString()).toString(CryptoJS.enc.Base64);
+    let uniqueNumber = 0;
+    for (let i = 0; i < hash.length; i++) {
+      uniqueNumber += hash.charCodeAt(i);
     }
+    // Garante que o número esteja no intervalo de 1 a 9
+    return (uniqueNumber % 9) + 1;
   };
 
+  // Função para formatar a sequência em pares
+  // Retorna um objeto com a sequência original e a versão hasheada
   const formatSequence = (sequence) => {
-    let formatted = [];
-    for (let i = 0; i < sequence.length; i += 2) {
-      formatted.push([sequence[i], sequence[i + 1]]);
+    let original = [];
+    let hashed = [];
+    for (let i = 0; i < sequence.length - 1; i += 2) {
+      original.push([sequence[i], sequence[i + 1]]);
+      hashed.push([hashToNumber(sequence[i]), hashToNumber(sequence[i + 1])]);
     }
-    return formatted;
+    // Se a sequência tiver número ímpar, trata o último elemento isoladamente
+    if (sequence.length % 2 !== 0) {
+      const lastElement = sequence[sequence.length - 1];
+      original.push([lastElement]);
+      hashed.push([hashToNumber(lastElement)]);
+    }
+    return { original, hashed };
   };
 
+  // Função para gerar os botões a partir da sequência
   const generateButtons = (sequence) => {
-    let correctPairs = [];
-    
-    for (let i = 0; i < sequence.length; i += 2) {
-      let num1 = sequence[i];
-      let num2 = sequence[i + 1];
-      
-      correctPairs.push([num1, num2]);
-    }
-
-    let allButtons = [];
-    correctPairs.forEach(pair => {
-      allButtons.push(pair);
-    });
-
-    for (let i = 0; i < correctPairs.length; i++) {
-      let num1 = Math.floor(Math.random() * 10);  
-      let num2 = Math.floor(Math.random() * 10);
-      allButtons.push([num1, num2]);
-    }
-
+    const formatted = formatSequence(sequence);
+    setPassword(formatted);
+    // Gera os botões utilizando a versão hasheada da sequência
+    const correctPairs = formatted.hashed;
+    let allButtons = correctPairs.map(pair => ({
+      shortNumber: pair[0],
+      secondShortNumber: pair[1] || null, // Caso o par seja composto por um único elemento
+    }));
+    // Embaralha a ordem dos botões
     allButtons = allButtons.sort(() => Math.random() - 0.5);
-
     setButtons(allButtons);
   };
 
+  // Função para gerar nova sessão
+  const handleGenerateSession = async () => {
+    if (!username) {
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const data = await generateSession(username);
+      console.log('Dados recebidos da API:', data);
+      if (data && data.sequence && Array.isArray(data.sequence)) {
+        setSessionId(data.session_id);
+        setToken(data.token);
+        setIsSessionValid(true);
+        generateButtons(data.sequence);
+        console.log('Token de Verificação:', data.token);
+      } else {
+      }
+    } catch (error) {
+      console.error('Erro ao gerar sessão:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Exibe os botões misturados
   const displayButtons = () => {
     if (buttons.length === 0) return <p>Esperando sequência...</p>;
-
     return (
       <div className="buttons">
-        {buttons.map((pair, index) => (
+        {buttons.map((button, index) => (
           <button
-            key={index}
-            onClick={() => handleButtonClick(pair)} 
+            key={`${button.shortNumber}-${index}`}
+            onClick={() => handleButtonClick(button.shortNumber, button.secondShortNumber)}
             disabled={isButtonDisabled}
+            className="button"
           >
-            [{pair[0]} ou {pair[1]}]
+            {button.secondShortNumber 
+              ? `${button.secondShortNumber} ou ${button.shortNumber}` 
+              : button.shortNumber}
           </button>
         ))}
       </div>
     );
   };
 
-  const apiUrl = "https://seuservidor.com"; // URL com HTTPS
-
-  const handleValidatePassword = async () => {
-    try {
-      const formattedSequence = [];
-      for (let i = 0; i < inputSequence.length; i += 2) {
-        formattedSequence.push([inputSequence[i], inputSequence[i + 1]]);
-      }
-
-      const isSequenceCorrect = formattedSequence.every((pair, index) => {
-        return pair[0] === password[index][0] && pair[1] === password[index][1];
-      });
-
-      if (!isSequenceCorrect) {
-        toast.error('Sequência incorreta');
-        return;
-      }
-
-      const response = await axios.post(`http://127.0.0.1:8000/validate_sequence`, {
-        session_id: sessionId,
-        sequence: formattedSequence,
-      }, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      console.log("✅ Sequência validada com sucesso:", response.data);
-      toast.success('Sequência validada com sucesso!');
-      setIsSessionValid(false);
-      setIsButtonDisabled(true);
-    } catch (error) {
-      console.log('Error response:', error.response ? error.response.data : error.message);
-      toast.error('Erro ao validar a sequência');
-    }
-  };
-
-  const handleButtonClick = (pair) => {
-    const flatPassword = password.flat();  // Cria uma lista plana da senha
-    const nextExpectedNumber = flatPassword[inputSequence.length];  // Obtém o próximo número esperado
-    
-    const isValid = pair.includes(nextExpectedNumber);  // Verifica se o número selecionado está no par
+  // Função para lidar com o clique nos botões
+  const handleButtonClick = (shortNumber, secondShortNumber) => {
+    // Utiliza a sequência hasheada para a validação
+    const flatPassword = Array.isArray(password.hashed) ? password.hashed.flat() : [];
+    const nextExpectedNumber = flatPassword[inputSequence.length];
   
-    if (isValid) {
+    if (nextExpectedNumber === undefined) {
+      return;
+    }
+  
+    let selectedNumber = null;
+    if (shortNumber === nextExpectedNumber) {
+      selectedNumber = shortNumber;
+    } else if (secondShortNumber === nextExpectedNumber) {
+      selectedNumber = secondShortNumber;
+    }
+  
+    if (selectedNumber !== null) {
       setInputSequence((prevSequence) => {
-        const newSequence = [...prevSequence, nextExpectedNumber];
-        console.log("Sequência do usuário após clique:", newSequence);
+        const newSequence = [...prevSequence, selectedNumber];
+        console.log('Sequência do usuário após clique:', newSequence);
+        if (newSequence.length === flatPassword.length) {
+          const isCorrect = newSequence.every((num, index) => num === flatPassword[index]);
+          if (isCorrect) {
+          } else {
+            setIsButtonDisabled(true);
+            setTimeout(() => setIsButtonDisabled(false), 2000);
+          }
+        }
+        // Embaralha os botões após o clique
+        generateButtons(password.original.flat());
         return newSequence;
       });
     } else {
-      toast.error(`Número ${nextExpectedNumber} não está no par. Tente novamente.`);
+      setIsButtonDisabled(true);
+      setTimeout(() => setIsButtonDisabled(false), 2000);
     }
   };
-
-  const generateSession = async (username) => {
-    const response = await axios.post('http://127.0.0.1:8000/generate_session', { username });
-    
-    // Criptografando o ID de Sessão antes de usá-lo
-    const encryptedSessionId = encryptSessionId(response.data.session_id);
-    
-    setSessionId(encryptedSessionId);
-    setPassword(formatSequence(response.data.sequence));
-    setToken(response.data.token);
-    
-    console.log('ID da sessão criptografado:', encryptedSessionId);
-    
-    return response.data;
-  };
-
-  const encryptSessionId = (sessionId) => {
-    // Use CryptoJS para criptografar o ID de Sessão
-    const encrypted = CryptoJS.AES.encrypt(sessionId, 'sua_chave_secreta').toString();
-    return encrypted;
-  };
-
-  const displayPassword = () => {
-    if (password.length === 0) return <p>Carregando senha...</p>;
-
+  
+  
+  // Exibe a senha gerada (versão hasheada)
+  const displayGeneratedPassword = () => {
+    if (!password.original || password.original.length === 0) return <p>Esperando sequência...</p>;
+  
+    // Flattening the password array and joining the elements into a string
+    const generatedPassword = password.hashed.flat();  // Flatten the hashed array
     return (
-      <p>
-        {password.map(pair => `[${pair[0]},${pair[1]}]`).join(' ')}
-      </p>
+      <div>
+        <h2 className="senha-gerada">Senha Gerada:</h2>
+        <p className='senha'>{generatedPassword.join('')}</p> {/* Agora como string contínua */}
+      </div>
     );
   };
 
+  // Função para validar a sequência digitada pelo usuário
+  const handleValidatePassword = async () => {
+    try {
+      console.log('Session ID enviado:', sessionId);
+      const flatPassword = password.hashed.flat();
+      // Compara diretamente a sequência inserida com a versão hasheada correta
+      if (inputSequence.join(' ') !== flatPassword.join(' ')) {
+        return;
+      }
+      const data = {
+        session_id: sessionId,
+        // Envia a sequência original para o backend
+        sequence: password.original.flat(),
+      };
+      // Criptografa o sessionId antes de enviar
+      const encryptedSessionId = CryptoJS.AES.encrypt(sessionId, 'chave-secreta').toString();
+      const response = await axios.post('http://127.0.0.1:8000/validate_sequence', data, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Encrypted-Session-Id': encryptedSessionId,
+        },
+      });
+      console.log('✅ Sequência validada com sucesso:', response.data);
+      setIsSessionValid(false);
+    } catch (error) {
+      console.log('Error response:', error.response ? error.response.data : error.message);
+    }
+  };
+
+  // Função para gerar sessão no backend
+  const generateSession = async (username) => {
+    const response = await axios.post('http://127.0.0.1:8000/generate_session', { username });
+    console.log('Resposta da API de geração de sessão:', response.data);
+    return response.data;
+  };
+
   return (
-    <div className="App">
+    <div className="App wrapper">
       <h1>Teclado Virtual</h1>
 
-      <div>
-        <label htmlFor="username">Nome de Usuário:</label>
-        <input
-          id="username"
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Digite seu nome de usuário"
-        />
-      </div>
+      {!isSessionValid ? (
+  <>
+    <div className="form-container">
+      <input
+        id="username"
+        type="text"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        placeholder="Nome de usuário"
+      />
+      <i className="bx bxs-user"></i>
+    </div>
 
-      <button onClick={handleGenerateSession}>Gerar Nova Sessão</button>
+    <button onClick={handleGenerateSession} className="primary-button" disabled={isLoading}>
+      {isLoading ? 'Gerando Sessão...' : 'Gerar Nova Sessão'}
+    </button>
+  </>
+) : (
+  <>
+    {displayGeneratedPassword()}
+    <h2 className='clique'>Clique nos botões abaixo para digitar a senha:</h2>
+    <div className="buttons-container">{displayButtons()}</div>
+    <h3>Senha Selecionada:</h3>
+    <p className='senha-digitada'>{inputSequence.join(' ')}</p>
+    <button onClick={handleValidatePassword} className="primary-button .validar-senha">
+      Validar Senha
+    </button>
+  </>
+)}
 
-      {isSessionValid ? (
-        <>
-          <h2>Senha Gerada:</h2>
-          {displayPassword()}
-
-          <h2>Clique nos botões abaixo para digitar a senha:</h2>
-          {displayButtons()}
-
-          <h3>Senha Selecionada:</h3>
-          <p>{inputSequence.map(pair => `[${pair[0]},${pair[1]}]`).join(' ') || "Nenhuma sequência selecionada ainda..."}</p>
-
-          <button onClick={handleValidatePassword}>Validar Senha</button>
-
-          {/* Exibe o Token de Verificação */}
-          <div>
-            <h3>Token de Verificação:</h3>
-            <p>{token}</p>
-          </div>
-        </>
-      ) : null}
 
       <ToastContainer />
     </div>
