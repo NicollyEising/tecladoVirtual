@@ -51,20 +51,47 @@ function App() {
     return { original, hashed };
   };
 
-  // Função para gerar os botões a partir da sequência
-  const generateButtons = (sequence) => {
-    const formatted = formatSequence(sequence);
-    setPassword(formatted);
-    // Gera os botões utilizando a versão hasheada da sequência
-    const correctPairs = formatted.hashed;
-    let allButtons = correctPairs.map(pair => ({
-      shortNumber: pair[0],
-      secondShortNumber: pair[1] || null, // Caso o par seja composto por um único elemento
-    }));
-    // Embaralha a ordem dos botões
-    allButtons = allButtons.sort(() => Math.random() - 0.5);
-    setButtons(allButtons);
-  };
+// Função para gerar os botões a partir da sequência
+const generateButtons = (sequence) => {
+  const formatted = formatSequence(sequence);
+  setPassword(formatted);
+
+  // Gera os números de 0 a 9
+  const allNumbers = [...Array(10).keys()];  // [0, 1, 2, ..., 9]
+
+  // Mistura os números da senha com os números de 0 a 9
+  const combinedNumbers = [...new Set([...allNumbers, ...formatted.hashed.flat()])];
+
+  // Embaralha os números para criar a ordem aleatória dos botões
+  const shuffledNumbers = combinedNumbers.sort(() => Math.random() - 0.5);
+
+  // Cria os pares de botões de forma aleatória
+  const allButtons = [];
+  for (let i = 0; i < shuffledNumbers.length; i += 2) {
+    if (i + 1 < shuffledNumbers.length) {
+      const firstNumber = shuffledNumbers[i];
+      const secondNumber = shuffledNumbers[i + 1];
+      allButtons.push({
+        shortNumber: firstNumber,
+        secondShortNumber: secondNumber, // Par aleatório de números
+      });
+    }
+  }
+
+  // Se houver um número sobrando (número ímpar de botões), coloca ele sozinho
+  if (shuffledNumbers.length % 2 !== 0) {
+    allButtons.push({
+      shortNumber: shuffledNumbers[shuffledNumbers.length - 1],
+      secondShortNumber: null,  // Não há um par para esse número
+    });
+  }
+
+  setButtons(allButtons);
+};
+
+
+
+
 
   // Função para gerar nova sessão
   const handleGenerateSession = async () => {
@@ -99,19 +126,20 @@ function App() {
     if (buttons.length === 0) return <p>Esperando sequência...</p>;
     return (
       <div className="buttons">
-        {buttons.map((button, index) => (
-          <button
-            key={`${button.shortNumber}-${index}`}
-            onClick={() => handleButtonClick(button.shortNumber, button.secondShortNumber)}
-            disabled={isButtonDisabled}
-            className="button"
-            style={inputSequence.includes(button.shortNumber) ? { backgroundColor: 'green' } : {}}
-          >
-            {button.secondShortNumber 
-              ? `${button.secondShortNumber} ou ${button.shortNumber}` 
-              : button.shortNumber}
-          </button>
-        ))}
+{buttons.map((button, index) => (
+  <button
+    key={`${button.shortNumber}-${index}`}
+    onClick={() => handleButtonClick(button.shortNumber, button.secondShortNumber)}
+    disabled={isButtonDisabled}
+    className="button"
+  >
+    {button.secondShortNumber
+      ? `${button.shortNumber} ou ${button.secondShortNumber}`
+      : button.shortNumber}
+  </button>
+))}
+
+
       </div>
     );
   };
