@@ -2,7 +2,7 @@
 
 Este projeto consiste em um sistema de autenticação seguro baseado em um teclado virtual, utilizando FastAPI para o backend e React para o frontend. O MongoDB é usado para armazenamento dos dados dos usuários.
 
-![texto](blob:https://imgur.com/a/SStQgj1)
+![img]([blob:https://imgur.com/a/SStQgj1](https://i.imgur.com/7jextha.jpeg))
 
 ## Requisitos
 
