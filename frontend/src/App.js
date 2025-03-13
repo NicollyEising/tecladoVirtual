@@ -8,7 +8,6 @@ import CryptoJS from 'crypto-js';
 function App() {
   const [username, setUsername] = useState('');
   const [sessionId, setSessionId] = useState('');
-  // Inicializa password como objeto com chaves "original" e "hashed"
   const [password, setPassword] = useState({ original: [], hashed: [] });
   const [inputSequence, setInputSequence] = useState([]);
   const [token, setToken] = useState('');
@@ -17,7 +16,6 @@ function App() {
   const [buttons, setButtons] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Função para gerar hash para cada número individualmente
   const hashToNumber = (input) => {
     if (input === undefined || input === null) {
       console.error("Valor inválido para hash:", input);
@@ -29,12 +27,9 @@ function App() {
     for (let i = 0; i < hash.length; i++) {
       uniqueNumber += hash.charCodeAt(i);
     }
-    // Garante que o número esteja no intervalo de 1 a 9
     return (uniqueNumber % 9) + 1;
   };
 
-  // Função para formatar a sequência em pares
-  // Retorna um objeto com a sequência original e a versão hasheada
   const formatSequence = (sequence) => {
     let original = [];
     let hashed = [];
@@ -42,7 +37,6 @@ function App() {
       original.push([sequence[i], sequence[i + 1]]);
       hashed.push([hashToNumber(sequence[i]), hashToNumber(sequence[i + 1])]);
     }
-    // Se a sequência tiver número ímpar, trata o último elemento isoladamente
     if (sequence.length % 2 !== 0) {
       const lastElement = sequence[sequence.length - 1];
       original.push([lastElement]);
@@ -51,21 +45,16 @@ function App() {
     return { original, hashed };
   };
 
-// Função para gerar os botões a partir da sequência
 const generateButtons = (sequence) => {
   const formatted = formatSequence(sequence);
   setPassword(formatted);
 
-  // Gera os números de 0 a 9
-  const allNumbers = [...Array(10).keys()];  // [0, 1, 2, ..., 9]
+  const allNumbers = [...Array(10).keys()];  
 
-  // Mistura os números da senha com os números de 0 a 9
   const combinedNumbers = [...new Set([...allNumbers, ...formatted.hashed.flat()])];
 
-  // Embaralha os números para criar a ordem aleatória dos botões
   const shuffledNumbers = combinedNumbers.sort(() => Math.random() - 0.5);
 
-  // Cria os pares de botões de forma aleatória
   const allButtons = [];
   for (let i = 0; i < shuffledNumbers.length; i += 2) {
     if (i + 1 < shuffledNumbers.length) {
@@ -73,16 +62,15 @@ const generateButtons = (sequence) => {
       const secondNumber = shuffledNumbers[i + 1];
       allButtons.push({
         shortNumber: firstNumber,
-        secondShortNumber: secondNumber, // Par aleatório de números
+        secondShortNumber: secondNumber,
       });
     }
   }
 
-  // Se houver um número sobrando (número ímpar de botões), coloca ele sozinho
   if (shuffledNumbers.length % 2 !== 0) {
     allButtons.push({
       shortNumber: shuffledNumbers[shuffledNumbers.length - 1],
-      secondShortNumber: null,  // Não há um par para esse número
+      secondShortNumber: null,  
     });
   }
 
@@ -94,7 +82,6 @@ const handleClearInput = () => {
   setInputSequence([]);
 };
 
-  // Função para gerar nova sessão
   const handleGenerateSession = async () => {
     if (!username) {
       return;
@@ -118,7 +105,6 @@ const handleClearInput = () => {
     }
   };
 
-  // Exibe os botões misturados
   const displayButtons = () => {
     if (buttons.length === 0) return <p>Esperando sequência...</p>;
     return (
@@ -141,9 +127,7 @@ const handleClearInput = () => {
     );
   };
 
-  // Função para lidar com o clique nos botões
   const handleButtonClick = (shortNumber, secondShortNumber) => {
-    // Utiliza a sequência hasheada para a validação
     const flatPassword = Array.isArray(password.hashed) ? password.hashed.flat() : [];
     const nextExpectedNumber = flatPassword[inputSequence.length];
   
@@ -170,7 +154,6 @@ const handleClearInput = () => {
             setTimeout(() => setIsButtonDisabled(false), 2000);
           }
         }
-        // Embaralha os botões após o clique
         generateButtons(password.original.flat());
         return newSequence;
       });
@@ -180,34 +163,28 @@ const handleClearInput = () => {
     }
   };
   
-  // Exibe a senha gerada (versão hasheada)
   const displayGeneratedPassword = () => {
     if (!password.original || password.original.length === 0) return <p>Esperando sequência...</p>;
   
-    // Flattening the password array and joining the elements into a string
-    const generatedPassword = password.hashed.flat();  // Flatten the hashed array
+    const generatedPassword = password.hashed.flat();  
     return (
       <div>
         <h2 className="senha-gerada">Senha Gerada:</h2>
-        <p className='senha'>{generatedPassword.join('')}</p> {/* Agora como string contínua */}
+        <p className='senha'>{generatedPassword.join('')}</p> {}
       </div>
     );
   };
-  // Função para validar a sequência digitada pelo usuário
   const handleValidatePassword = async () => {
     try {
       console.log('Session ID enviado:', sessionId);
       const flatPassword = password.hashed.flat();
-      // Compara diretamente a sequência inserida com a versão hasheada correta
       if (inputSequence.join(' ') !== flatPassword.join(' ')) {
         return;
       }
       const data = {
         session_id: sessionId,
-        // Envia a sequência original para o backend
         sequence: password.original.flat(),
       };
-      // Criptografa o sessionId antes de enviar
       const encryptedSessionId = CryptoJS.AES.encrypt(sessionId, 'chave-secreta').toString();
       const response = await axios.post('http://127.0.0.1:8000/validate_sequence', data, {
         headers: {
@@ -222,7 +199,6 @@ const handleClearInput = () => {
     }
   };
 
-  // Função para gerar sessão no backend
   const generateSession = async (username) => {
     const response = await axios.post('http://127.0.0.1:8000/generate_session', { username });
     console.log('Resposta da API de geração de sessão:', response.data);
