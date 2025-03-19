@@ -174,3 +174,19 @@ font-size: 20px;
   margin-bottom: 10px;
 }
 
+.buttons {
+  display: flex;
+  justify-content: center;  /* Centraliza os botões horizontalmente */
+  flex-wrap: wrap;  /* Permite que os botões quebrem linha se necessário */
+}
+
+.button-clear {
+  background-color: transparent;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 25px;
+  cursor: pointer;
+}
+
+

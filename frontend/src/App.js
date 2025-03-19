@@ -90,26 +90,38 @@ function App() {
     }
   };
 
+  const handleClearSequence = () => {
+    setInputSequence([]);  // Limpa a sequência de números digitados
+  };
+
+
   // Exibe os botões misturados
   const displayButtons = () => {
-    if (buttons.length === 0) return <p>Esperando sequência...</p>;
-    return (
-      <div className="buttons">
-        {buttons.map((button, index) => (
-          <button
-            key={`${button.shortNumber}-${index}`}
-            onClick={() => handleButtonClick(button.shortNumber, button.secondShortNumber)}
-            disabled={isButtonDisabled}
-            className="button"
-          >
-            {button.secondShortNumber 
-              ? `${button.secondShortNumber} ou ${button.shortNumber}` 
-              : button.shortNumber}
-          </button>
-        ))}
-      </div>
-    );
-  };
+  if (buttons.length === 0) return <p>Esperando sequência...</p>;
+  return (
+    <div className="buttons">
+      {buttons.map((button, index) => (
+        <button
+          key={`${button.shortNumber}-${index}`}
+          onClick={() => handleButtonClick(button.shortNumber, button.secondShortNumber)}
+          disabled={isButtonDisabled}
+          className="button"
+        >
+          {button.secondShortNumber 
+            ? `${button.secondShortNumber} ou ${button.shortNumber}` 
+            : button.shortNumber}
+        </button>
+      ))}
+      {/* Botão para apagar a sequência */}
+      <a
+        onClick={handleClearSequence}
+        className="button-clear"
+      >
+        <i class='bx bxs-trash'></i>
+      </a>
+    </div>
+  );
+};
 
   // Função para lidar com o clique nos botões
   const handleButtonClick = (shortNumber, secondShortNumber) => {

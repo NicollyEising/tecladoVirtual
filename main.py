@@ -11,9 +11,8 @@ import os
 from jose import JWTError, jwt
 from fastapi import FastAPI, HTTPException, Request, Header
 from pydantic import BaseModel
-from bancoDeDados import *
 from fastapi.middleware.cors import CORSMiddleware
-
+from passlib.context import CryptContext
 
 # Configuração do MongoDB
 MONGO_URI = "mongodb+srv://nicollymunhozeising85:RRSAkX1DsOd5MRVO@cluster0.9xwlq.mongodb.net/"
@@ -48,6 +47,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+users_collection = db["users"]
+sessions_collection = db["sessions"]  # Garantindo que a collection de sessões seja nomeada corretamente
+blocked_ips_collection = db["blocked_ips"] 
+
 def encrypt_numbers(numbers: list) -> list:
     hashed_numbers = [hashlib.sha256(str(num).encode('utf-8')).hexdigest() for num in numbers]
     return hashed_numbers
