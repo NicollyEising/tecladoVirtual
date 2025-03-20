@@ -8,7 +8,6 @@ import CryptoJS from 'crypto-js';
 function App() {
   const [username, setUsername] = useState('');
   const [sessionId, setSessionId] = useState('');
-  // Inicializa password como objeto com chaves "original" e "hashed"
   const [password, setPassword] = useState({ original: [], hashed: [] });
   const [inputSequence, setInputSequence] = useState([]);
   const [token, setToken] = useState('');
@@ -34,7 +33,6 @@ function App() {
   };
 
   // Função para formatar a sequência em pares
-  // Retorna um objeto com a sequência original e a versão hasheada
   const formatSequence = (sequence) => {
     let original = [];
     let hashed = [];
@@ -55,11 +53,11 @@ function App() {
   const generateButtons = (sequence) => {
     const formatted = formatSequence(sequence);
     setPassword(formatted);
-    // Gera os botões utilizando a versão hasheada da sequência
     const correctPairs = formatted.hashed;
     let allButtons = correctPairs.map(pair => ({
       shortNumber: pair[0],
       secondShortNumber: pair[1] || null, // Caso o par seja composto por um único elemento
+      currentNumber: pair[0], // Inicializa o número atual com o primeiro número
     }));
     // Embaralha a ordem dos botões
     allButtons = allButtons.sort(() => Math.random() - 0.5);
@@ -81,6 +79,7 @@ function App() {
         setIsSessionValid(true);
         generateButtons(data.sequence);
         console.log('Token de Verificação:', data.token);
+        handleClearSequence();
       } else {
       }
     } catch (error) {
@@ -94,38 +93,36 @@ function App() {
     setInputSequence([]);  // Limpa a sequência de números digitados
   };
 
-
   // Exibe os botões misturados
   const displayButtons = () => {
-  if (buttons.length === 0) return <p>Esperando sequência...</p>;
-  return (
-    <div className="buttons">
-      {buttons.map((button, index) => (
-        <button
-          key={`${button.shortNumber}-${index}`}
-          onClick={() => handleButtonClick(button.shortNumber, button.secondShortNumber)}
-          disabled={isButtonDisabled}
-          className="button"
+    if (buttons.length === 0) return <p>Esperando sequência...</p>;
+    return (
+      <div className="buttons">
+        {buttons.map((button, index) => (
+          <button
+            key={`${button.shortNumber}-${index}`}
+            onClick={() => handleButtonClick(button, index)}
+            disabled={isButtonDisabled}
+            className="button"
+          >
+            {button.secondShortNumber 
+              ? `${button.currentNumber} ou ${button.secondShortNumber}` 
+              : button.currentNumber}
+          </button>
+        ))}
+        {/* Botão para apagar a sequência */}
+        <a
+          onClick={handleClearSequence}
+          className="button-clear"
         >
-          {button.secondShortNumber 
-            ? `${button.secondShortNumber} ou ${button.shortNumber}` 
-            : button.shortNumber}
-        </button>
-      ))}
-      {/* Botão para apagar a sequência */}
-      <a
-        onClick={handleClearSequence}
-        className="button-clear"
-      >
-        <i class='bx bxs-trash'></i>
-      </a>
-    </div>
-  );
-};
+          <i className='bx bxs-trash'></i>
+        </a>
+      </div>
+    );
+  };
 
   // Função para lidar com o clique nos botões
-  const handleButtonClick = (shortNumber, secondShortNumber) => {
-    // Utiliza a sequência hasheada para a validação
+  const handleButtonClick = (button, index) => {
     const flatPassword = Array.isArray(password.hashed) ? password.hashed.flat() : [];
     const nextExpectedNumber = flatPassword[inputSequence.length];
   
@@ -134,10 +131,10 @@ function App() {
     }
   
     let selectedNumber = null;
-    if (shortNumber === nextExpectedNumber) {
-      selectedNumber = shortNumber;
-    } else if (secondShortNumber === nextExpectedNumber) {
-      selectedNumber = secondShortNumber;
+    if (button.currentNumber === nextExpectedNumber) {
+      selectedNumber = button.currentNumber;
+    } else if (button.secondShortNumber === nextExpectedNumber) {
+      selectedNumber = button.secondShortNumber;
     }
   
     if (selectedNumber !== null) {
@@ -160,14 +157,22 @@ function App() {
       setIsButtonDisabled(true);
       setTimeout(() => setIsButtonDisabled(false), 2000);
     }
+
+    // Alterna o número mostrado no botão após cada clique
+    setButtons((prevButtons) => {
+      const newButtons = [...prevButtons];
+      const updatedButton = { ...newButtons[index] };
+      updatedButton.currentNumber = updatedButton.currentNumber === updatedButton.shortNumber 
+        ? updatedButton.secondShortNumber 
+        : updatedButton.shortNumber;
+      newButtons[index] = updatedButton;
+      return newButtons;
+    });
   };
-  
-  
+
   // Exibe a senha gerada (versão hasheada)
   const displayGeneratedPassword = () => {
     if (!password.original || password.original.length === 0) return <p>Esperando sequência...</p>;
-  
-    // Flattening the password array and joining the elements into a string
     const generatedPassword = password.hashed.flat();  // Flatten the hashed array
     return (
       <div>
@@ -182,16 +187,13 @@ function App() {
     try {
       console.log('Session ID enviado:', sessionId);
       const flatPassword = password.hashed.flat();
-      // Compara diretamente a sequência inserida com a versão hasheada correta
       if (inputSequence.join(' ') !== flatPassword.join(' ')) {
         return;
       }
       const data = {
         session_id: sessionId,
-        // Envia a sequência original para o backend
         sequence: password.original.flat(),
       };
-      // Criptografa o sessionId antes de enviar
       const encryptedSessionId = CryptoJS.AES.encrypt(sessionId, 'chave-secreta').toString();
       const response = await axios.post('http://127.0.0.1:8000/validate_sequence', data, {
         headers: {
@@ -216,38 +218,34 @@ function App() {
   return (
     <div className="App wrapper">
       <h1>Teclado Virtual</h1>
-
       {!isSessionValid ? (
-  <>
-    <div className="form-container">
-      <input
-        id="username"
-        type="text"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        placeholder="Nome de usuário"
-      />
-      <i className="bx bxs-user"></i>
-    </div>
-
-    <button onClick={handleGenerateSession} className="primary-button" disabled={isLoading}>
-      {isLoading ? 'Gerando Sessão...' : 'Gerar Nova Sessão'}
-    </button>
-  </>
-) : (
-  <>
-    {displayGeneratedPassword()}
-    <h2 className='clique'>Clique nos botões abaixo para digitar a senha:</h2>
-    <div className="buttons-container">{displayButtons()}</div>
-    <h3>Senha Selecionada:</h3>
-    <p className='senha-digitada'>{inputSequence.join(' ')}</p>
-    <button onClick={handleValidatePassword} className="primary-button .validar-senha">
-      Validar Senha
-    </button>
-  </>
-)}
-
-
+        <>
+          <div className="form-container">
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Nome de usuário"
+            />
+            <i className="bx bxs-user"></i>
+          </div>
+          <button onClick={handleGenerateSession} className="primary-button" disabled={isLoading}>
+            {isLoading ? 'Gerando Sessão...' : 'Gerar Nova Sessão'}
+          </button>
+        </>
+      ) : (
+        <>
+          {displayGeneratedPassword()}
+          <h2 className='clique'>Clique nos botões abaixo para digitar a senha:</h2>
+          <div className="buttons-container">{displayButtons()}</div>
+          <h3>Senha Selecionada:</h3>
+          <p className='senha-digitada'>{inputSequence.join(' ')}</p>
+          <button onClick={handleValidatePassword} className="primary-button .validar-senha">
+            Validar Senha
+          </button>
+        </>
+      )}
       <ToastContainer />
     </div>
   );

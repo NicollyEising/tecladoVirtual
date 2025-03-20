@@ -3,12 +3,12 @@
 :: Instalar as dependências do backend (Python)
 pip install -r requirements.txt
 
-uvicorn main:app --host 0.0.0.0 --port 8000
-:: Instalar as dependências do frontend (Node.js)
-cd frontend
+:: Iniciar o servidor backend em um novo terminal
+start cmd /k "uvicorn main:app --host 0.0.0.0 --port 8000"
 
-:: Iniciar o servidor backend
+:: Aguardar um pouco para garantir que o backend está rodando
+timeout /t 3
 
-:: Entrar no diretório do frontend e iniciar o React
+:: Entrar no diretório do frontend
 cd frontend
 npm start
