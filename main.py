@@ -140,7 +140,7 @@ def validate_sequence(data: ValidationRequest, request: Request, authorization: 
 
     for hash_value in data.sequence:
         if not isinstance(hash_value, str) or not hash_pattern.match(hash_value):
-            raise HTTPException(status_code=400, detail=f"Valor inválido na sequência: {hash_value}. Esperado um hash de 64 caracteres.")
+            raise HTTPException(status_code=400, detail=f"Valor inválido")
 
     sessions_collection.delete_one({"session_id": hash_session_id(data.session_id)}) 
 
@@ -205,8 +205,8 @@ def save_session(hashed_id, sequence, expiration_time, attempts=0, ip_address=No
     sessions_collection.update_one({"session_id": hashed_id}, {"$set": session_data}, upsert=True)
 
 class User(BaseModel):
-    username: str
-    password: str
+    user_id: str
+    pin: str
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -226,33 +226,36 @@ def get_session(hashed_id):
     return sessions_collection.find_one({"session_id": hashed_id})
 
 def delete_session(hashed_id):
-    result = sessions_collection.delete_one({"session_id": hashed_id})
-    return result.deleted_count > 0
+    return sessions_collection.delete_one({"session_id": hashed_id}).deleted_count > 0
 
 def get_session_count():
     return sessions_collection.count_documents({})
 
 def is_ip_blocked(ip_address):
     blocked_ip = blocked_ips_collection.find_one({"ip": ip_address})
-    if blocked_ip and blocked_ip["expires_at"] > datetime.utcnow():
-        return True
-    return False
+    return blocked_ip and blocked_ip["expires_at"] > datetime.utcnow()
 
 def block_ip(ip_address):
-    expires_at = datetime.utcnow() + timedelta(seconds=IP_BLOCK_DURATION_SECONDS)
+    expires_at = datetime.utcnow() + timedelta(seconds=BLOCK_DURATION_SECONDS)
     blocked_ips_collection.update_one({"ip": ip_address}, {"$set": {"expires_at": expires_at}}, upsert=True)
 
 def increment_failed_attempts(hashed_id, ip_address):
     session = get_session(hashed_id)
     if not session:
         return
-    
+
     attempts = session.get("attempts", 0) + 1
-    save_session(hashed_id, session["sequence"], session["expires_at"], attempts, ip_address)
+    
+    # Atualiza o número de tentativas
+    sessions_collection.update_one(
+        {"session_id": hashed_id},
+        {"$set": {"attempts": attempts}},
+        upsert=True
+    )
 
     if attempts >= MAX_FAILED_ATTEMPTS:
         block_ip(ip_address)
-        delete_session(hashed_id) 
+        delete_session(hashed_id)
 
 def clean_expired_sessions():
     now = datetime.utcnow()
@@ -266,16 +269,12 @@ def generate_jwt(session_id):
 def validate_jwt(token: str, expected_session_id: str):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        token_session_id = payload.get("session_id")
-        if token_session_id != expected_session_id:
+        if payload.get("session_id") != expected_session_id:
             raise HTTPException(status_code=401, detail="Token não corresponde à sessão.")
-        return True
-    except JWTError as e:
-        raise HTTPException(status_code=401, detail=f"Token inválido ou expirado: {str(e)}")
-
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Token inválido ou expirado.")
 def encrypt_pin(pin: str) -> str:
-    encrypted_pin = cipher.encrypt(pin.encode()).decode()
-    return encrypted_pin
+    return cipher.encrypt(pin.encode()).decode()
 
 def get_decrypted_pin(user_id: str) -> str:
     user = users_collection.find_one({"user_id": user_id})
@@ -293,11 +292,8 @@ def create_user(user_id: str, pin: str):
     }
     users_collection.insert_one(user_data)
 
-def decrypt_pin(encrypted_pin: str):
+def decrypt_pin(encrypted_pin: str) -> str:
     try:
-        decrypted_pin = cipher.decrypt(encrypted_pin.encode()).decode()
-        return decrypted_pin
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Erro interno no servidor.")
-    
-    
+        return cipher.decrypt(encrypted_pin.encode()).decode()
+    except Exception:
+        raise HTTPException(status_code=500, detail="Erro ao descriptografar o PIN.")
